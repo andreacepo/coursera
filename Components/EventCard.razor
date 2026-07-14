@@ -1,0 +1,170 @@
+<article class="event-card">
+    <div class="event-header">
+        <h3>@EventName</h3>
+        <span class="badge text-bg-light">@RegistrationCount registrations</span>
+    </div>
+    <p><strong>Date:</strong> @EventDate.ToString("dddd, MMMM d, yyyy")</p>
+    <p><strong>Location:</strong> @Location</p>
+
+    <div class="event-fields">
+        <label class="form-label" for="@($"event-name-{EventId}")">Event name</label>
+        <input
+            id="@($"event-name-{EventId}")"
+            class="form-control"
+            value="@EventName"
+            @onchange="HandleNameInput" />
+        @if (!string.IsNullOrEmpty(eventNameError))
+        {
+            <div class="invalid-feedback d-block">@eventNameError</div>
+        }
+
+        <label class="form-label mt-2" for="@($"event-date-{EventId}")">Date</label>
+        <input
+            id="@($"event-date-{EventId}")"
+            type="date"
+            class="form-control"
+            min="@minDate"
+            max="@maxDate"
+            value="@EventDate.ToString("yyyy-MM-dd")"
+            @onchange="HandleDateInput" />
+        @if (!string.IsNullOrEmpty(eventDateError))
+        {
+            <div class="invalid-feedback d-block">@eventDateError</div>
+        }
+
+        <label class="form-label mt-2" for="@($"event-location-{EventId}")">Location</label>
+        <input
+            id="@($"event-location-{EventId}")"
+            class="form-control"
+            value="@Location"
+            @onchange="HandleLocationInput" />
+        @if (!string.IsNullOrEmpty(locationError))
+        {
+            <div class="invalid-feedback d-block">@locationError</div>
+        }
+    </div>
+
+    <div class="event-actions">
+        <a class="btn btn-primary @(isInputValid ? string.Empty : "disabled")"
+           href="@($"/event-details/{EventId}")"
+           aria-disabled="@(!isInputValid)">View details</a>
+        <a class="btn btn-outline-primary @(isInputValid ? string.Empty : "disabled")"
+           href="@($"/registration/{EventId}")"
+           aria-disabled="@(!isInputValid)">Register</a>
+    </div>
+</article>
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    [Parameter]
+    public int RegistrationCount { get; set; }
+
+    [Parameter]
+    public string EventName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> EventNameChanged { get; set; }
+
+    [Parameter]
+    public DateTime EventDate { get; set; }
+
+    [Parameter]
+    public EventCallback<DateTime> EventDateChanged { get; set; }
+
+    [Parameter]
+    public string Location { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> LocationChanged { get; set; }
+
+    private string? eventNameError;
+    private string? eventDateError;
+    private string? locationError;
+    private bool isInputValid = true;
+
+    private string minDate => DateTime.Today.AddYears(-1).ToString("yyyy-MM-dd");
+    private string maxDate => DateTime.Today.AddYears(5).ToString("yyyy-MM-dd");
+
+    private Task HandleNameInput(ChangeEventArgs args)
+    {
+        var value = (args.Value?.ToString() ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            eventNameError = "Event name is required.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        if (value.Length > 100)
+        {
+            eventNameError = "Event name must be 100 characters or fewer.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        eventNameError = null;
+        EventName = value;
+        UpdateValidationState();
+        return EventNameChanged.InvokeAsync(value);
+    }
+
+    private Task HandleLocationInput(ChangeEventArgs args)
+    {
+        var value = (args.Value?.ToString() ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            locationError = "Location is required.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        if (value.Length > 120)
+        {
+            locationError = "Location must be 120 characters or fewer.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        locationError = null;
+        Location = value;
+        UpdateValidationState();
+        return LocationChanged.InvokeAsync(value);
+    }
+
+    private Task HandleDateInput(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (!DateTime.TryParse(rawValue, out var parsedDate))
+        {
+            eventDateError = "Please select a valid date.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        var min = DateTime.Today.AddYears(-1);
+        var max = DateTime.Today.AddYears(5);
+
+        if (parsedDate < min || parsedDate > max)
+        {
+            eventDateError = $"Date must be between {min:yyyy-MM-dd} and {max:yyyy-MM-dd}.";
+            UpdateValidationState();
+            return Task.CompletedTask;
+        }
+
+        eventDateError = null;
+        EventDate = parsedDate;
+        UpdateValidationState();
+        return EventDateChanged.InvokeAsync(parsedDate);
+    }
+
+    private void UpdateValidationState()
+    {
+        isInputValid = string.IsNullOrEmpty(eventNameError)
+            && string.IsNullOrEmpty(eventDateError)
+            && string.IsNullOrEmpty(locationError);
+    }
+}

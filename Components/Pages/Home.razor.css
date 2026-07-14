@@ -1,0 +1,12 @@
+.event-toolbar {
+    margin-bottom: 1rem;
+}
+
+.summary-pill {
+    display: inline-block;
+    background: #eef5ff;
+    border: 1px solid #d5e3ff;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+}

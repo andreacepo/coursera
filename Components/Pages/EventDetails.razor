@@ -1,0 +1,48 @@
+@page "/event-details/{EventId:int}"
+@inject NavigationManager Navigation
+@inject EventStateService State
+@inject UserSessionTrackerService Session
+
+<PageTitle>Event Details</PageTitle>
+
+<h1>Event Details</h1>
+
+@if (selectedEvent is null)
+{
+    <p>Event not found.</p>
+    <a class="btn btn-outline-primary" href="/events">Back to event list</a>
+}
+else
+{
+    <section>
+        <h3>@selectedEvent.Name</h3>
+        <p><strong>Date:</strong> @selectedEvent.Date.ToString("dddd, MMMM d, yyyy")</p>
+        <p><strong>Location:</strong> @selectedEvent.Location</p>
+        <p><strong>Registrations:</strong> @State.GetRegistrationCount(selectedEvent.Id)</p>
+        <p><strong>Attended:</strong> @State.GetAttendanceCount(selectedEvent.Id)</p>
+        <p>@selectedEvent.Description</p>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/events">Back to event list</a>
+            <a class="btn btn-primary" href="@($"/registration/{selectedEvent.Id}")">Continue to registration</a>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    private EventInfo? selectedEvent;
+
+    protected override void OnParametersSet()
+    {
+        selectedEvent = State.GetEventById(EventId);
+        if (selectedEvent is null)
+        {
+            Navigation.NavigateTo("/not-found", true);
+            return;
+        }
+
+        Session.SetSelectedEvent(EventId);
+    }
+}

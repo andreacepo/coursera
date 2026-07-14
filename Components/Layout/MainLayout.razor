@@ -1,0 +1,53 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject UserSessionTrackerService Session
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <div class="session-summary">
+                <span><strong>Session:</strong> @Session.SessionId[..8]</span>
+                <span><strong>Route:</strong> @Session.CurrentRoute</span>
+                <span><strong>Last active (UTC):</strong> @Session.LastActivityUtc.ToString("HH:mm:ss")</span>
+                @if (Session.SelectedEventId is not null)
+                {
+                    <span><strong>Selected Event:</strong> @Session.SelectedEventId</span>
+                }
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Session.Touch(new Uri(Navigation.Uri).AbsolutePath);
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        Session.Touch(new Uri(args.Location).AbsolutePath);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleLocationChanged;
+    }
+}

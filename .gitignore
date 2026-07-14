@@ -1,0 +1,10 @@
+bin/
+obj/
+publish/
+AppData/
+.vs/
+
+*.user
+*.suo
+*.cache
+*.log

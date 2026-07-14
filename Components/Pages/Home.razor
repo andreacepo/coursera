@@ -1,0 +1,87 @@
+﻿@page "/"
+@page "/events"
+@rendermode InteractiveServer
+@inject EventStateService State
+@inject UserSessionTrackerService Session
+
+<PageTitle>Home</PageTitle>
+
+<h1>EventEase</h1>
+<p>Browse events, edit details quickly, and keep registrations organized.</p>
+
+<div class="row g-2 align-items-end event-toolbar">
+    <div class="col-12 col-md-6">
+        <label class="form-label" for="search">Search events</label>
+        <input id="search" class="form-control" @bind="searchTerm" @bind:event="oninput" placeholder="Type event name or location" />
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label" for="sort">Sort by</label>
+        <select id="sort" class="form-select" @bind="selectedSort">
+            <option value="date-asc">Date (Earliest)</option>
+            <option value="date-desc">Date (Latest)</option>
+            <option value="name-asc">Name (A-Z)</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3 text-md-end">
+        <div class="summary-pill">
+            <strong>@filteredEvents.Count</strong> events shown
+        </div>
+        <div class="summary-pill mt-1">
+            <strong>@State.Registrations.Count</strong> total registrations
+        </div>
+    </div>
+</div>
+
+@if (filteredEvents.Count == 0)
+{
+    <div class="alert alert-warning mt-3">No events match your current search.</div>
+}
+else
+{
+    <Virtualize Items="filteredEvents" Context="eventInfo">
+        <EventCard
+            @key="eventInfo.Id"
+            EventId="@eventInfo.Id"
+            RegistrationCount="@State.GetRegistrationCount(eventInfo.Id)"
+            @bind-EventName="eventInfo.Name"
+            @bind-EventDate="eventInfo.Date"
+            @bind-Location="eventInfo.Location" />
+    </Virtualize>
+}
+
+@code {
+    private string searchTerm = string.Empty;
+    private string selectedSort = "date-asc";
+
+    private List<EventInfo> filteredEvents =>
+        ApplySort(
+            State.Events
+                .Where(e => MatchesSearch(e, searchTerm))
+                .ToList());
+
+    private static bool MatchesSearch(EventInfo eventInfo, string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            return true;
+        }
+
+        return eventInfo.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || eventInfo.Location.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private List<EventInfo> ApplySort(List<EventInfo> events)
+    {
+        return selectedSort switch
+        {
+            "date-desc" => events.OrderByDescending(e => e.Date).ToList(),
+            "name-asc" => events.OrderBy(e => e.Name).ToList(),
+            _ => events.OrderBy(e => e.Date).ToList()
+        };
+    }
+
+    protected override void OnInitialized()
+    {
+        Session.Touch("/events");
+    }
+}

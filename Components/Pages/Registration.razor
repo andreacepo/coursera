@@ -1,0 +1,142 @@
+@page "/registration/{EventId:int}"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject EventStateService State
+@inject UserSessionTrackerService Session
+
+<PageTitle>Registration</PageTitle>
+
+<h1>Event Registration</h1>
+
+@if (selectedEvent is null)
+{
+    <p>Event not found. Please select an event from the list first.</p>
+    <a class="btn btn-outline-primary" href="/events">Back to event list</a>
+}
+else
+{
+    <p>Complete your registration for <strong>@selectedEvent.Name</strong>.</p>
+    <p><strong>Current registrations:</strong> @State.GetRegistrationCount(selectedEvent.Id)</p>
+
+    <div class="d-flex gap-2 mb-3">
+        <a class="btn btn-outline-secondary" href="@($"/event-details/{selectedEvent.Id}")">Back to details</a>
+        <a class="btn btn-outline-primary" href="/events">Back to event list</a>
+        <a class="btn btn-outline-dark" href="/registrations">View all registrations</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(infoMessage))
+    {
+        <p class="mt-2 text-info">@infoMessage</p>
+    }
+
+    <EditForm Model="registrationModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label" for="fullName">Full Name</label>
+            <InputText id="fullName" class="form-control" @bind-Value="registrationModel.FullName" />
+            <ValidationMessage For="() => registrationModel.FullName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <InputText id="email" class="form-control" @bind-Value="registrationModel.Email" />
+            <ValidationMessage For="() => registrationModel.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="company">Company</label>
+            <InputText id="company" class="form-control" @bind-Value="registrationModel.Company" />
+            <ValidationMessage For="() => registrationModel.Company" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="attendees">Attendee Count</label>
+            <InputNumber id="attendees" class="form-control" @bind-Value="registrationModel.AttendeeCount" />
+            <ValidationMessage For="() => registrationModel.AttendeeCount" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="requests">Special Requests</label>
+            <InputTextArea id="requests" class="form-control" @bind-Value="registrationModel.SpecialRequests" />
+            <ValidationMessage For="() => registrationModel.SpecialRequests" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" @onclick="SaveDraft">Save Draft</button>
+            <button type="submit" class="btn btn-primary">Submit Registration</button>
+        </div>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(submitError))
+    {
+        <p class="mt-3 text-danger">@submitError</p>
+    }
+
+    @if (isRegistered)
+    {
+        <p class="mt-3 text-success">Registration submitted successfully.</p>
+    }
+}
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    private EventRegistration registrationModel = new();
+    private EventInfo? selectedEvent;
+    private bool isRegistered;
+    private string submitError = string.Empty;
+    private string infoMessage = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        selectedEvent = State.GetEventById(EventId);
+        if (selectedEvent is null)
+        {
+            Navigation.NavigateTo("/not-found", true);
+            return;
+        }
+
+        Session.SetSelectedEvent(EventId);
+
+        var draft = Session.GetDraft(EventId);
+        if (draft is not null)
+        {
+            registrationModel = draft;
+            infoMessage = "Draft loaded for this event.";
+        }
+        else
+        {
+            registrationModel.EventId = EventId;
+            infoMessage = string.Empty;
+        }
+    }
+
+    private void HandleSubmit()
+    {
+        submitError = string.Empty;
+        registrationModel.EventId = EventId;
+
+        if (!State.TryAddRegistration(registrationModel, out var errorMessage))
+        {
+            submitError = errorMessage;
+            isRegistered = false;
+            return;
+        }
+
+        isRegistered = true;
+        infoMessage = "Registration submitted and session draft cleared.";
+        Session.ClearDraft(EventId);
+        registrationModel = new EventRegistration { EventId = EventId };
+    }
+
+    private void SaveDraft()
+    {
+        registrationModel.EventId = EventId;
+        Session.SaveDraft(registrationModel);
+        infoMessage = "Draft saved in current user session.";
+        submitError = string.Empty;
+    }
+}

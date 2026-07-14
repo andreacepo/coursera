@@ -1,0 +1,99 @@
+@page "/registrations"
+@rendermode InteractiveServer
+@inject EventStateService State
+@inject UserSessionTrackerService Session
+
+<PageTitle>Registrations</PageTitle>
+
+<h1>Registrations</h1>
+
+@if (!string.IsNullOrEmpty(actionMessage))
+{
+    <p class="text-success">@actionMessage</p>
+}
+
+@if (!string.IsNullOrEmpty(actionError))
+{
+    <p class="text-danger">@actionError</p>
+}
+
+@if (State.Registrations.Count == 0)
+{
+    <p>No registrations yet.</p>
+    <a class="btn btn-primary" href="/events">Back to events</a>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Attendees</th>
+                <th>Attendance</th>
+                <th>Submitted (UTC)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var registration in State.Registrations.OrderByDescending(r => r.RegisteredAtUtc))
+            {
+                var eventName = State.GetEventById(registration.EventId)?.Name ?? "Unknown Event";
+                var attended = State.HasAttendance(registration.EventId, registration.Email);
+                <tr>
+                    <td>@eventName</td>
+                    <td>@registration.FullName</td>
+                    <td>@registration.Email</td>
+                    <td>@registration.Company</td>
+                    <td>@registration.AttendeeCount</td>
+                    <td>
+                        @if (attended)
+                        {
+                            <span class="badge text-bg-success">Checked In</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-secondary">Pending</span>
+                        }
+                    </td>
+                    <td>@registration.RegisteredAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success"
+                                disabled="@attended"
+                                @onclick="() => MarkAttended(registration.EventId, registration.Email)">
+                            Mark Attended
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <a class="btn btn-outline-primary" href="/events">Back to events</a>
+}
+
+@code {
+    private string actionMessage = string.Empty;
+    private string actionError = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Session.Touch("/registrations");
+    }
+
+    private void MarkAttended(int eventId, string email)
+    {
+        actionMessage = string.Empty;
+        actionError = string.Empty;
+
+        if (!State.TryMarkAttendance(eventId, email, out var errorMessage))
+        {
+            actionError = errorMessage;
+            return;
+        }
+
+        actionMessage = "Attendance marked successfully.";
+    }
+}
