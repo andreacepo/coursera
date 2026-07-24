@@ -1,0 +1,58 @@
+@UserManagmentAPI_HostAddress = http://localhost:5004
+@UserId = 00000000-0000-0000-0000-000000000000
+@Token = REPLACE_WITH_TOKEN
+
+GET {{UserManagmentAPI_HostAddress}}/
+Accept: application/json
+
+###
+
+POST {{UserManagmentAPI_HostAddress}}/auth/token
+Content-Type: application/json
+
+{
+	"clientId": "techhive-client",
+	"clientSecret": "techhive-secret"
+}
+
+###
+
+GET {{UserManagmentAPI_HostAddress}}/users?page=1&pageSize=20
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+###
+
+GET {{UserManagmentAPI_HostAddress}}/users/{{UserId}}
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+###
+
+POST {{UserManagmentAPI_HostAddress}}/users
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+	"name": "Ivo",
+	"email": "ivo@example.com"
+}
+
+###
+
+PUT {{UserManagmentAPI_HostAddress}}/users/{{UserId}}
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+	"name": "Ivo Updated",
+	"email": "ivo.updated@example.com"
+}
+
+###
+
+DELETE {{UserManagmentAPI_HostAddress}}/users/{{UserId}}
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+###
